@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Password Strength Checker</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 500px;
+    }
+
+    h1 {
+      color: #58a6ff;
+      font-size: 25px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #8b949e;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+
+    label {
+      display: block;
+      color: #8b949e;
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 8px;
+    }
+
+    input {
+      width: 100%;
+      min-width: 0;
+      padding: 13px;
+      background: #111820;
+      color: #fff;
+      border: 1px solid #303943;
+      border-radius: 5px;
+      font-size: 15px;
+    }
+
+    input:focus {
+      outline: 1px solid #388bfd;
+    }
+
+    button {
+      padding: 11px 14px;
+      border: 1px solid #303943;
+      border-radius: 5px;
+      background: transparent;
+      color: #c9d1d9;
+      cursor: pointer;
+    }
+
+    button:hover {
+      filter: brightness(1.2);
+    }
+
+    .strength-info {
+      display: flex;
+      justify-content: space-between;
+      margin: 18px 0 8px;
+      font-size: 12px;
+      color: #8b949e;
+    }
+
+    .strength-label {
+      color: #f85149;
+      font-weight: bold;
+    }
+
+    .progress-track {
+      height: 4px;
+      background: #29313b;
+    }
+
+    .progress-bar {
+      width: 0;
+      height: 100%;
+      background: #f85149;
+      transition: width 0.2s;
+    }
+
+    h3 {
+      margin: 28px 0 14px;
+      color: #58a6ff;
+      font-size: 12px;
+    }
+
+    .rules {
+      list-style: none;
+      border-top: 1px solid #252d37;
+    }
+
+    .rules li {
+      padding: 11px 0;
+      border-bottom: 1px solid #252d37;
+      color: #a5b1c2;
+      font-size: 13px;
+    }
+
+    .rules li.valid {
+      color: #56d381;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 22px;
+    }
+
+    .generate-btn {
+      flex: 1;
+      background: #2463a9;
+      border-color: #2463a9;
+      color: white;
+    }
+
+    .message {
+      min-height: 18px;
+      margin-top: 12px;
+      color: #8b949e;
+      font-size: 12px;
+    }
+
+    .note {
+      margin-top: 28px;
+      padding-top: 14px;
+      border-top: 1px solid #252d37;
+      color: #6e7681;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 420px) {
+      body {
+        align-items: flex-start;
+      }
+
+      .container {
+        margin-top: 8vh;
+      }
+
+      h1 {
+        font-size: 23px;
+      }
+
+      .generate-btn {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>Password Checker</h1>
+    <p class="subtitle">
+      Check your password strength or generate a secure password.
+    </p>
+
+    <label for="password">Your Password</label>
+
+    <div class="input-wrapper">
+      <input type="password" id="password" placeholder="Enter a password..." autocomplete="new-password">
+      <button type="button" id="toggleBtn">Show</button>
+    </div>
+
+    <div class="strength-info">
+      <span>Strength</span>
+      <span class="strength-label" id="strengthText">Not entered</span>
+    </div>
+
+    <div class="progress-track">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <h3>Password Requirements</h3>
+
+    <ul class="rules">
+      <li id="lengthRule">At least 12 characters</li>
+      <li id="caseRule">Uppercase and lowercase letters</li>
+      <li id="numberRule">At least one number (0–9)</li>
+      <li id="specialRule">At least one special character (!@#$%^&*)</li>
+    </ul>
+
+    <div class="actions">
+      <button type="button" class="generate-btn" id="generateBtn">
+        Generate Password
+      </button>
+      <button type="button" id="copyBtn">Copy</button>
+    </div>
+
+    <p class="message" id="message" aria-live="polite"></p>
+
+    <p class="note">
+      Passwords are checked in your browser and are not sent to a server.
+    </p>
+  </main>
+
+  <script>
+    const password = document.getElementById("password");
+    const strengthText = document.getElementById("strengthText");
+    const progressBar = document.getElementById("progressBar");
+    const message = document.getElementById("message");
+
+    const rules = {
+      length: document.getElementById("lengthRule"),
+      case: document.getElementById("caseRule"),
+      number: document.getElementById("numberRule"),
+      special: document.getElementById("specialRule")
+    };
+
+    function checkPassword(value) {
+      return {
+        length: value.length >= 12,
+        case: /[A-Z]/.test(value) && /[a-z]/.test(value),
+        number: /\d/.test(value),
+        special: /[^A-Za-z0-9]/.test(value)
+      };
+    }
+
+    function checkStrength() {
+      const results = checkPassword(password.value);
+      const keys = Object.keys(results);
+      let score = 0;
+
+      keys.forEach(key => {
+        rules[key].classList.toggle("valid", results[key]);
+        if (results[key]) score++;
+      });
+
+      const labels = ["Very Weak", "Weak", "Okay", "Good", "Strong"];
+      const colors = ["#ef4444", "#f97316", "#eab308", "#84cc16", "#22c55e"];
+
+      progressBar.style.width = score * 25 + "%";
+      progressBar.style.backgroundColor = colors[score];
+
+      strengthText.textContent = password.value
+        ? labels[score]
+        : "Not entered";
+
+      strengthText.style.color = password.value
+        ? colors[score]
+        : "#f85149";
+    }
+
+    password.addEventListener("input", () => {
+      checkStrength();
+      message.textContent = "";
+    });
+
+    document.getElementById("toggleBtn").addEventListener("click", function () {
+      const show = password.type === "password";
+      password.type = show ? "text" : "password";
+      this.textContent = show ? "Hide" : "Show";
+    });
+
+    function randomInt(max) {
+      const limit = 256 - (256 % max);
+      const bytes = new Uint8Array(1);
+      do {
+        crypto.getRandomValues(bytes);
+      } while (bytes[0] >= limit);
+      return bytes[0] % max;
+    }
+
+    function shuffle(chars) {
+      for (let i = chars.length - 1; i > 0; i--) {
+        const j = randomInt(i + 1);
+        [chars[i], chars[j]] = [chars[j], chars[i]];
+      }
+      return chars;
+    }
+
+    function makePassword() {
+      const upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const lower = "abcdefghijklmnopqrstuvwxyz";
+      const numbers = "0123456789";
+      const special = "!@#$%^&*";
+      const all = upper + lower + numbers + special;
+
+      const chars = [
+        upper[randomInt(upper.length)],
+        lower[randomInt(lower.length)],
+        numbers[randomInt(numbers.length)],
+        special[randomInt(special.length)]
+      ];
+
+      for (let i = 0; i < 12; i++) {
+        chars.push(all[randomInt(all.length)]);
+      }
+
+      return shuffle(chars).join("");
+    }
+
+    document.getElementById("generateBtn").addEventListener("click", () => {
+      try {
+        password.value = makePassword();
+        checkStrength();
+        message.textContent = "Password generated.";
+        message.style.color = "#56d381";
+      } catch {
+        message.textContent = "Password generation is unavailable.";
+        message.style.color = "#f85149";
+      }
+    });
+
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      if (!password.value) {
+        message.textContent = "Enter or generate a password first.";
+        message.style.color = "#f85149";
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(password.value);
+        message.textContent = "Password copied.";
+        message.style.color = "#56d381";
+      } catch {
+        message.textContent = "Could not copy the password.";
+        message.style.color = "#f85149";
+      }
+    });
+
+    checkStrength();
+  </script>
+</body>
+
+</html>
